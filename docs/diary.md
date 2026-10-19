@@ -77,4 +77,8 @@ Pull request 1 was merged before the SARIF upload was pushed, so that change was
 
 The SAST job failed before it scanned anything. The Semgrep image does not provide a `scan` command, so the workflow now runs `semgrep scan`.
 
+## Step 13. Remove npm from the runtime image
+
+The container scan failed on high vulnerabilities in `brace-expansion`, `picomatch`, `sigstore`, `ip-address`, and `pacote`. Those packages belong to the npm client shipped in `node:22-alpine`, not to the app. The image now deletes npm after `npm ci`, because the running task only needs `node`.
+
 
