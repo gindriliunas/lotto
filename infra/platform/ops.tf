@@ -67,11 +67,21 @@ resource "aws_iam_role_policy" "github_deploy" {
           "ecr:BatchCheckLayerAvailability",
           "ecr:BatchGetImage",
           "ecr:CompleteLayerUpload",
+          "ecr:DescribeImages",
           "ecr:InitiateLayerUpload",
           "ecr:PutImage",
           "ecr:UploadLayerPart",
         ]
-        Resource = data.aws_ecr_repository.app.arn
+        Resource = aws_ecr_repository.app.arn
+      },
+      {
+        Sid    = "RegisterRevision"
+        Effect = "Allow"
+        Action = [
+          "ecs:DescribeTaskDefinition",
+          "ecs:RegisterTaskDefinition",
+        ]
+        Resource = "*"
       },
       {
         Sid    = "RollService"
@@ -81,6 +91,20 @@ resource "aws_iam_role_policy" "github_deploy" {
           "ecs:UpdateService",
         ]
         Resource = aws_ecs_service.app.id
+      },
+      {
+        Sid    = "PassTaskRoles"
+        Effect = "Allow"
+        Action = "iam:PassRole"
+        Resource = [
+          aws_iam_role.execution.arn,
+          aws_iam_role.task.arn,
+        ]
+        Condition = {
+          StringEquals = {
+            "iam:PassedToService" = "ecs-tasks.amazonaws.com"
+          }
+        }
       },
     ]
   })
