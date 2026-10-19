@@ -65,4 +65,24 @@ A ruleset on https://github.com/gindriliunas/lotto now targets the default branc
 
 This folder is now its own git repo. The home-folder repo was left alone. `main` on GitHub refuses a direct push, so the app and the scans went to the branch `add-scratch-card`. The pull request is https://github.com/gindriliunas/lotto/pull/1. It keeps the Deploy workflow that was already on GitHub.
 
+## Step 10. Send scan results to the Security tab
+
+Each of the six jobs now writes a SARIF report and uploads it. On the pull request the findings show against the change. They appear in the repository Security tab after the workflow runs on `main`. ZAP's own report is JSON, and `scripts/zap-json-to-sarif.mjs` converts it.
+
+## Step 11. Open a second pull request
+
+Pull request 1 was merged before the SARIF upload was pushed, so that change was not on `main`. It is now in https://github.com/gindriliunas/lotto/pull/2.
+
+## Step 12. Fix the Semgrep command
+
+The SAST job failed before it scanned anything. The Semgrep image does not provide a `scan` command, so the workflow now runs `semgrep scan`.
+
+## Step 13. Remove npm from the runtime image
+
+The container scan failed on high vulnerabilities in `brace-expansion`, `picomatch`, `sigstore`, `ip-address`, and `pacote`. Those packages belong to the npm client shipped in `node:22-alpine`, not to the app. The image now deletes npm after `npm ci`, because the running task only needs `node`.
+
+## Step 14. Point ZAP findings at a file
+
+GitHub refused the DAST report because each location was an `http` address. The URL stays in the finding text. The location is now `src/server.js`, which is the process ZAP scanned.
+
 
