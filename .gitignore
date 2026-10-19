@@ -3,6 +3,8 @@ node_modules/
 .data-check/
 .env
 *.log
+*.sarif
+zap-out/
 .terraform/
 *.tfstate
 *.tfstate.*
