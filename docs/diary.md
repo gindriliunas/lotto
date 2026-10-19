@@ -65,4 +65,8 @@ A ruleset on https://github.com/gindriliunas/lotto now targets the default branc
 
 This folder is now its own git repo. The home-folder repo was left alone. `main` on GitHub refuses a direct push, so the app and the scans went to the branch `add-scratch-card`. The pull request is https://github.com/gindriliunas/lotto/pull/1. It keeps the Deploy workflow that was already on GitHub.
 
+## Step 10. Send scan results to the Security tab
+
+Each of the six jobs now writes a SARIF report and uploads it. On the pull request the findings show against the change. They appear in the repository Security tab after the workflow runs on `main`. ZAP's own report is JSON, and `scripts/zap-json-to-sarif.mjs` converts it.
+
 

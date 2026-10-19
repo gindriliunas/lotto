@@ -139,14 +139,14 @@ The assume-role test is done. The permission policy is the next tightening, adde
 - push to `arn:aws:ecr:eu-west-2:631026310596:repository/scratch-card`
 - `ecs:DescribeServices` and `ecs:UpdateService` on `arn:aws:ecs:eu-west-2:631026310596:service/scratch-card/scratch-card`
 
-Checks on the way to that deploy. `.github/workflows/security.yml` runs all six on a pull request and again on a push to `main`. A high or critical finding fails the check. None of them deploy anything.
+Checks on the way to that deploy. `.github/workflows/security.yml` runs all six on a pull request and again on a push to `main`. A high or critical finding fails the check. Each job writes SARIF and uploads it with `github/codeql-action/upload-sarif`. The pull request shows the findings immediately. The repository Security tab lists them after the same workflow runs on `main`. None of them deploy anything.
 
 - **SAST.** Semgrep 1.181.0 scans the JavaScript with the `javascript` and `nodejs` rules. An error-level finding fails the job.
 - **SCA.** Trivy 0.76 reads `package-lock.json` and fails on a high or critical dependency vulnerability that has a fix.
 - **Terraform.** Trivy config-scans `infra/` and fails on a high or critical misconfiguration. It does not run `terraform apply`. The S3 findings that fail a public bucket are `AWS-0086`, `AWS-0087`, `AWS-0088`, `AWS-0091`, `AWS-0093`, and `AWS-0094`. The check name is **Reject a bucket that is not private**.
 - **Container.** The workflow builds the Dockerfile and Trivy scans that image. ECR scan-on-push repeats the scan in the account. A critical finding stops the rollout.
 - **Secret.** Gitleaks 8.30.1 scans the checkout and its git history. `.gitleaks.toml` ignores only `certs/global-bundle.pem`, which is Amazon's public CA bundle. GitHub push protection is the earlier block, at the moment of the push.
-- **DAST.** The job starts the app with `NODE_ENV=development` and runs the OWASP ZAP 2.17.0 baseline against `http://127.0.0.1:3000`. A warning does not fail the job. A ZAP failure does.
+- **DAST.** The job starts the app with `NODE_ENV=development` and runs the OWASP ZAP 2.17.0 baseline against `http://127.0.0.1:3000`. ZAP writes JSON. `scripts/zap-json-to-sarif.mjs` turns that into SARIF. A warning does not fail the job. A ZAP failure does.
 - `npm run check` repeats the credit, replay, reset, and jackpot rules. It is not in this workflow yet.
 - The ECS deployment circuit breaker rolls back a task that fails `GET /health`.
 

@@ -7,7 +7,9 @@ on:
       - main
 
 permissions:
+  actions: read
   contents: read
+  security-events: write
 
 concurrency:
   group: security-${{ github.ref }}
@@ -21,6 +23,8 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Scan JavaScript with Semgrep
+        id: scan
+        continue-on-error: true
         run: >
           docker run --rm
           -v ${{ github.workspace }}:/src
@@ -32,6 +36,19 @@ jobs:
           --error
           --severity ERROR
           --metrics=off
+          --sarif
+          --output semgrep.sarif
+
+      - name: Upload SARIF
+        if: always() && hashFiles('semgrep.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
+
+      - name: Fail the check when the scan fails
+        if: steps.scan.outcome == 'failure'
+        run: exit 1
 
   sca:
     name: SCA
@@ -40,6 +57,8 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Scan dependencies
+        id: scan
+        continue-on-error: true
         run: >
           docker run --rm
           -v ${{ github.workspace }}:/work
@@ -52,7 +71,20 @@ jobs:
           --severity HIGH,CRITICAL
           --ignore-unfixed
           --skip-version-check
+          --format sarif
+          --output trivy-sca.sarif
           .
+
+      - name: Upload SARIF
+        if: always() && hashFiles('trivy-sca.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-sca.sarif
+          category: trivy-sca
+
+      - name: Fail the check when the scan fails
+        if: steps.scan.outcome == 'failure'
+        run: exit 1
 
   terraform:
     name: Reject a bucket that is not private
@@ -61,6 +93,8 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Scan Terraform
+        id: scan
+        continue-on-error: true
         run: >
           docker run --rm
           -v ${{ github.workspace }}:/work
@@ -70,7 +104,20 @@ jobs:
           --exit-code 1
           --severity HIGH,CRITICAL
           --skip-version-check
+          --format sarif
+          --output trivy-terraform.sarif
           infra
+
+      - name: Upload SARIF
+        if: always() && hashFiles('trivy-terraform.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-terraform.sarif
+          category: trivy-terraform
+
+      - name: Fail the check when the scan fails
+        if: steps.scan.outcome == 'failure'
+        run: exit 1
 
   container:
     name: Container
@@ -82,16 +129,33 @@ jobs:
         run: docker build -t scratch-card:scan .
 
       - name: Scan the image
+        id: scan
+        continue-on-error: true
         run: >
           docker run --rm
           -v /var/run/docker.sock:/var/run/docker.sock
+          -v ${{ github.workspace }}:/work
+          -w /work
           ghcr.io/aquasecurity/trivy:0.76.0
           image
           --exit-code 1
           --severity HIGH,CRITICAL
           --ignore-unfixed
           --skip-version-check
+          --format sarif
+          --output trivy-image.sarif
           scratch-card:scan
+
+      - name: Upload SARIF
+        if: always() && hashFiles('trivy-image.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-image.sarif
+          category: trivy-image
+
+      - name: Fail the check when the scan fails
+        if: steps.scan.outcome == 'failure'
+        run: exit 1
 
   secret:
     name: Secret
@@ -102,6 +166,8 @@ jobs:
           fetch-depth: 0
 
       - name: Scan the git history
+        id: scan
+        continue-on-error: true
         run: >
           docker run --rm
           -v ${{ github.workspace }}:/repo
@@ -110,8 +176,21 @@ jobs:
           detect
           --source=/repo
           --config=/repo/.gitleaks.toml
+          --report-format sarif
+          --report-path gitleaks.sarif
           --verbose
           --redact
+
+      - name: Upload SARIF
+        if: always() && hashFiles('gitleaks.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: gitleaks.sarif
+          category: gitleaks
+
+      - name: Fail the check when the scan fails
+        if: steps.scan.outcome == 'failure'
+        run: exit 1
 
   dast:
     name: DAST
@@ -127,7 +206,11 @@ jobs:
       - run: npm ci
 
       - name: Scan the running app
+        id: scan
+        continue-on-error: true
         run: |
+          mkdir -p zap-out
+          chmod 777 zap-out
           NODE_ENV=development node src/server.js > server.log 2>&1 &
           for _ in $(seq 1 30); do
             if curl -sf http://127.0.0.1:3000/health; then
@@ -137,6 +220,22 @@ jobs:
           done
           curl -sf http://127.0.0.1:3000/health
           docker run --rm -t \
+            -v ${{ github.workspace }}/zap-out:/zap/wrk:rw \
             --add-host=host.docker.internal:host-gateway \
             ghcr.io/zaproxy/zaproxy:2.17.0 \
-            zap-baseline.py -t http://host.docker.internal:3000 -I
+            zap-baseline.py -t http://host.docker.internal:3000 -I -J zap.json
+
+      - name: Convert the ZAP report to SARIF
+        if: always() && hashFiles('zap-out/zap.json') != ''
+        run: node scripts/zap-json-to-sarif.mjs zap-out/zap.json zap-out/zap.sarif
+
+      - name: Upload SARIF
+        if: always() && hashFiles('zap-out/zap.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: zap-out/zap.sarif
+          category: zap
+
+      - name: Fail the check when the scan fails
+        if: steps.scan.outcome == 'failure'
+        run: exit 1
