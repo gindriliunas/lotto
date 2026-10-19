@@ -73,4 +73,8 @@ Each of the six jobs now writes a SARIF report and uploads it. On the pull reque
 
 Pull request 1 was merged before the SARIF upload was pushed, so that change was not on `main`. It is now in https://github.com/gindriliunas/lotto/pull/2.
 
+## Step 12. Fix the Semgrep command
+
+The SAST job failed before it scanned anything. The Semgrep image does not provide a `scan` command, so the workflow now runs `semgrep scan`.
+
 
