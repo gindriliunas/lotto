@@ -129,6 +129,14 @@ The application load balancer is in the two public subnets, with the `alb` secur
 
 `infra/state` created the private bucket `lotto-terraform-state-631026310596`, and `infra/platform` keeps its state there. Apply attached Cognito and the origin check to the existing load balancer, and created the private buckets, ECS service, WAF, and deploy permission. The `us-east-1` certificate for `gindri.com` is issued. CloudFront was refused because this AWS account is not verified for new CloudFront resources. GuardDuty was adopted. The account already has a CloudTrail named `management-events`.
 
+## Step 26. Explain the app in the README
+
+`README.md` now says what the scratch card is, how a play and a screenshot work, and shows the high-level design plus the three data flows. The security section matches what is already on: the server-side draw, GitHub checks, the network, and the Terraform stack. CloudFront is described as waiting on account verification.
+
+## Step 27. Deploy after the security checks
+
+The Deploy workflow starts when the Security workflow succeeds on a push to `main`. A pull request still only runs the scans. The job keeps the `production` environment so the AWS role trust still matches.
+
 ## Not done yet
 
 GitHub leftovers:
@@ -148,6 +156,6 @@ AWS, in this order. The settings are in `docs/aws-lab.md`.
 4. ECR repository and scan on push. Done. The image is pushed from GitHub, then ECS: circuit breaker, no public address on the task.
 5. Ask AWS Support to verify the account for CloudFront, then run `terraform -chdir=infra/platform apply` again. That creates the distribution and the artwork bucket policy.
 6. Point `gindri.com` at `ns-1877.awsdns-42.co.uk`, `ns-81.awsdns-10.com`, `ns-943.awsdns-53.net`, and `ns-1406.awsdns-47.org`, or the site stays on the current DNS host.
-7. Run the Deploy workflow, then set `desired_count` above 0. The service exists with no tasks until then.
+7. After this change is on `main`, a passing Security run starts Deploy. Set `desired_count` above 0 or the rolled service still has no tasks.
 
 

@@ -2,17 +2,25 @@ name: Deploy
 
 on:
   workflow_dispatch:
+  workflow_run:
+    workflows: ["Security"]
+    types: [completed]
 
 jobs:
   deploy:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     environment: production
     permissions:
       id-token: write
       contents: read
+    env:
+      IMAGE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
     steps:
       - name: Check out the repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Assume the role
         uses: aws-actions/configure-aws-credentials@v4
@@ -24,9 +32,9 @@ jobs:
         run: |
           registry=631026310596.dkr.ecr.eu-west-2.amazonaws.com
           aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin "$registry"
-          docker build -t "$registry/scratch-card:latest" -t "$registry/scratch-card:${{ github.sha }}" .
+          docker build -t "$registry/scratch-card:latest" -t "$registry/scratch-card:${IMAGE_SHA}" .
           docker push "$registry/scratch-card:latest"
-          docker push "$registry/scratch-card:${{ github.sha }}"
+          docker push "$registry/scratch-card:${IMAGE_SHA}"
 
       - name: Roll the service
         run: aws ecs update-service --cluster scratch-card --service scratch-card --force-new-deployment
