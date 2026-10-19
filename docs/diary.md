@@ -85,4 +85,77 @@ The container scan failed on high vulnerabilities in `brace-expansion`, `picomat
 
 GitHub refused the DAST report because each location was an `http` address. The URL stays in the finding text. The location is now `src/server.js`, which is the process ZAP scanned.
 
+## Step 15. Scans pass
+
+Pull request 2 is merged. SAST, SCA, Terraform, Container, Secret, and DAST all passed, and the SARIF uploads passed too. GitHub for this lab is in place. The next work is the AWS build below.
+
+## Step 16. Show the zones and the NAT gateway
+
+The high-level diagram in `docs/diagrams.md` now shows two Availability Zones, one NAT gateway, and the restriction on each part.
+
+## Step 17. Name the hierarchy
+
+The high-level design now states the order account, region, VPC, availability zone, subnet, and maps each level to this lab.
+
+## Step 18. Draw the account around the regions
+
+The high-level diagram in `docs/diagrams.md` now draws the AWS account as the outer box. `us-east-1` and `eu-west-2` sit inside it, and the VPC sits inside London.
+
+## Step 19. Add certificates, ports, and security groups
+
+The high-level design now shows both certificates, the port on each hop, and the three security groups: 443 from CloudFront, 3000 from the load balancer, and 5432 from the tasks.
+
+## Step 20. Create the database
+
+The London VPC now has the four subnets, one NAT gateway, the three security groups, and a PostgreSQL database in the private subnets. The password is in Secrets Manager. Rotation of that secret is still to be turned on.
+
+## Step 21. Rotate the database password
+
+Secrets Manager rotation is on for the RDS secret, every 7 days.
+
+## Step 22. Create the image repository
+
+The private ECR repository `scratch-card` is in `eu-west-2`. Basic scanning is on, and a push to that repository is scanned automatically. The repository is empty because Docker is not installed on this computer.
+
+## Step 23. Issue the London certificate
+
+AWS issued the `eu-west-2` certificate for `gindr.com`. The validation CNAME is in the DNS host that the domain actually uses.
+
+## Step 24. Create the load balancer
+
+The application load balancer is in the two public subnets, with the `alb` security group and the London certificate on port 443. It forwards to the target group `scratch-card`. Cognito is not on the listener yet.
+
+## Step 25. Describe the rest in Terraform
+
+`infra/state` created the private bucket `lotto-terraform-state-631026310596`, and `infra/platform` keeps its state there. Apply attached Cognito and the origin check to the existing load balancer, and created the private buckets, ECS service, WAF, and deploy permission. The `us-east-1` certificate for `gindri.com` is issued. CloudFront was refused because this AWS account is not verified for new CloudFront resources. GuardDuty was adopted. The account already has a CloudTrail named `management-events`.
+
+## Step 26. Explain the app in the README
+
+`README.md` now says what the scratch card is, how a play and a screenshot work, and shows the high-level design plus the three data flows. The security section matches what is already on: the server-side draw, GitHub checks, the network, and the Terraform stack. CloudFront is described as waiting on account verification.
+
+## Step 27. Deploy after the security checks
+
+The Deploy workflow starts when the Security workflow succeeds on a push to `main`. A pull request still only runs the scans. The job keeps the `production` environment so the AWS role trust still matches.
+
+## Not done yet
+
+GitHub leftovers:
+
+- Confirm the ruleset requires **Reject a bucket that is not private**. The screen that was saved showed SAST, DAST, SCA, Secret, Container, and the Trivy code-scanning result.
+- On the `production` environment, allow deployments from `main` only.
+- Set Actions workflow permissions to read-only.
+- Turn on MFA for `gindriliunas` if it is not already on.
+- Add `npm run check` to `.github/workflows/security.yml`.
+- Move `github/codeql-action/upload-sarif` from v3 to v4.
+
+AWS, in this order. The settings are in `docs/aws-lab.md`.
+
+1. VPC. Done.
+2. Three security groups. Done.
+3. RDS and password rotation. Done.
+4. ECR repository and scan on push. Done. The image is pushed from GitHub, then ECS: circuit breaker, no public address on the task.
+5. Ask AWS Support to verify the account for CloudFront, then run `terraform -chdir=infra/platform apply` again. That creates the distribution and the artwork bucket policy.
+6. Point `gindri.com` at `ns-1877.awsdns-42.co.uk`, `ns-81.awsdns-10.com`, `ns-943.awsdns-53.net`, and `ns-1406.awsdns-47.org`, or the site stays on the current DNS host.
+7. After this change is on `main`, a passing Security run starts Deploy. Set `desired_count` above 0 or the rolled service still has no tasks.
+
 
