@@ -247,11 +247,13 @@ The production environment requires a review before Deploy runs. In this lab the
 | Secret | Gitleaks on the checkout and its history. The only allow is the public RDS CA bundle. |
 | DAST | OWASP ZAP baseline against the local app. |
 
-`.github/workflows/deploy.yml` assumes `arn:aws:iam::631026310596:role/gindriliunas` with GitHub OIDC. The trust subject is `repo:gindriliunas@213284389/lotto@1423209416:environment:production`. There is no stored AWS access key. The role may log in to ECR, push `scratch-card`, and update that one ECS service. That permission is the Terraform policy `scratch-card-deploy`.
+`.github/workflows/deploy.yml` assumes `arn:aws:iam::631026310596:role/gindriliunas` with GitHub OIDC. The trust subject is `repo:gindriliunas@213284389/lotto@1423209416:environment:production`. There is no stored AWS access key. The role may log in to ECR, push `scratch-card`, register a task definition that uses the two task roles, and update that one ECS service. That permission is the Terraform policy `scratch-card-deploy`.
 
-Deploy starts after the Security workflow succeeds on a push to `main`. A pull request runs the scans and does not deploy. The job still uses the `production` environment, because the role trust requires that subject. If that environment has a required reviewer, GitHub holds the job until the review.
+Deploy starts only after the Security workflow succeeds on a push to `main`. A pull request runs the scans and does not deploy. There is no manual run. The job still uses the `production` environment, because the role trust requires that subject. If that environment has a required reviewer, GitHub holds the job until the review.
 
-ECR basic scanning runs on push.
+The deploy job builds the image once, scans that image with Trivy, and pushes it only if the scan passes. The tag is the git commit. ECR tags are immutable, so a later push cannot move that tag. The job then registers a task definition whose image is `scratch-card@sha256:...` and points the service at that revision. It does not push `:latest`.
+
+ECR basic scanning also runs on push.
 
 ### AWS
 

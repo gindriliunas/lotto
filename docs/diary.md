@@ -137,6 +137,26 @@ The application load balancer is in the two public subnets, with the `alb` secur
 
 The Deploy workflow starts when the Security workflow succeeds on a push to `main`. A pull request still only runs the scans. The job keeps the `production` environment so the AWS role trust still matches.
 
+## Step 28. Draft the 15-minute talk
+
+A slide deck for the security walk-through is beside the chat. Canva is not connected from this session, so the slides are a canvas rather than a Canva file.
+
+## Step 29. Match the talk to the brief
+
+The 15-minute deck now follows the requested order: architecture, threats, GitHub, the pipeline, AWS, secrets, monitoring, and residual risk. The assumptions are on the first slide.
+
+## Step 30. Write the Cursor prompt and the AWS finish line
+
+`docs/cursor-prompt.md` is the app spec, written as the prompt that produces `src/`, `public/`,
+`scripts/`, and the `Dockerfile` from nothing, with the reasoning for each rule kept next to the
+rule. `docs/aws-next-steps.md` is the three real items still open in the account: the CloudFront
+account verification, the `gindri.com` name-server cutover, and pushing the first image to turn the
+ECS service on. Both stay out of `infra/` and `.github/` on purpose.
+
+## Step 31. Pin the deploy to the image that was scanned
+
+Deploy builds one image, scans it, and pushes the commit tag. The service then runs `scratch-card@sha256:...`. ECR tags are immutable, and a manual Deploy run no longer skips the scans. Signing the image is still to do.
+
 ## Not done yet
 
 GitHub leftovers:
@@ -147,6 +167,7 @@ GitHub leftovers:
 - Turn on MFA for `gindriliunas` if it is not already on.
 - Add `npm run check` to `.github/workflows/security.yml`.
 - Move `github/codeql-action/upload-sarif` from v3 to v4.
+- Sign the image with cosign and verify the signature before Deploy registers the task definition.
 
 AWS, in this order. The settings are in `docs/aws-lab.md`.
 

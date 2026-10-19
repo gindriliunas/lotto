@@ -141,10 +141,16 @@ resource "aws_ecs_task_definition" "app" {
   execution_role_arn       = aws_iam_role.execution.arn
   task_role_arn            = aws_iam_role.task.arn
 
+  # Deploy registers the revision the service runs and pins it to a digest.
+  # Terraform does not push or roll that image.
+  lifecycle {
+    ignore_changes = [container_definitions]
+  }
+
   container_definitions = jsonencode([
     {
-      name      = "scratch-card"
-      image     = "${data.aws_ecr_repository.app.repository_url}:latest"
+      name  = "scratch-card"
+      image = "${aws_ecr_repository.app.repository_url}:bootstrap"
       essential = true
       portMappings = [
         {
@@ -196,6 +202,12 @@ resource "aws_ecs_service" "app" {
   }
 
   health_check_grace_period_seconds = 60
+
+  # The Deploy workflow points the service at a digest. An apply must not
+  # move it back to the bootstrap revision.
+  lifecycle {
+    ignore_changes = [task_definition]
+  }
 
   depends_on = [aws_lb_listener_rule.health]
 }

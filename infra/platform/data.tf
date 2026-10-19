@@ -32,10 +32,6 @@ data "aws_lb_target_group" "app" {
   name = "scratch-card"
 }
 
-data "aws_ecr_repository" "app" {
-  name = "scratch-card"
-}
-
 data "aws_acm_certificate" "london" {
   domain      = var.domain_name
   statuses    = ["ISSUED"]
