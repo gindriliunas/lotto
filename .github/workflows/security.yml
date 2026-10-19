@@ -1,0 +1,142 @@
+name: Security
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sast:
+    name: SAST
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan JavaScript with Semgrep
+        run: >
+          docker run --rm
+          -v ${{ github.workspace }}:/src
+          -w /src
+          semgrep/semgrep:1.181.0
+          scan
+          --config p/javascript
+          --config p/nodejs
+          --error
+          --severity ERROR
+          --metrics=off
+
+  sca:
+    name: SCA
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan dependencies
+        run: >
+          docker run --rm
+          -v ${{ github.workspace }}:/work
+          -w /work
+          ghcr.io/aquasecurity/trivy:0.76.0
+          fs
+          --scanners vuln
+          --pkg-types library
+          --exit-code 1
+          --severity HIGH,CRITICAL
+          --ignore-unfixed
+          --skip-version-check
+          .
+
+  terraform:
+    name: Reject a bucket that is not private
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan Terraform
+        run: >
+          docker run --rm
+          -v ${{ github.workspace }}:/work
+          -w /work
+          ghcr.io/aquasecurity/trivy:0.76.0
+          config
+          --exit-code 1
+          --severity HIGH,CRITICAL
+          --skip-version-check
+          infra
+
+  container:
+    name: Container
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the image
+        run: docker build -t scratch-card:scan .
+
+      - name: Scan the image
+        run: >
+          docker run --rm
+          -v /var/run/docker.sock:/var/run/docker.sock
+          ghcr.io/aquasecurity/trivy:0.76.0
+          image
+          --exit-code 1
+          --severity HIGH,CRITICAL
+          --ignore-unfixed
+          --skip-version-check
+          scratch-card:scan
+
+  secret:
+    name: Secret
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan the git history
+        run: >
+          docker run --rm
+          -v ${{ github.workspace }}:/repo
+          -w /repo
+          ghcr.io/gitleaks/gitleaks:v8.30.1
+          detect
+          --source=/repo
+          --config=/repo/.gitleaks.toml
+          --verbose
+          --redact
+
+  dast:
+    name: DAST
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Scan the running app
+        run: |
+          NODE_ENV=development node src/server.js > server.log 2>&1 &
+          for _ in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:3000/health; then
+              break
+            fi
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:3000/health
+          docker run --rm -t \
+            --add-host=host.docker.internal:host-gateway \
+            ghcr.io/zaproxy/zaproxy:2.17.0 \
+            zap-baseline.py -t http://host.docker.internal:3000 -I

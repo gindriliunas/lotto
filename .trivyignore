@@ -1,0 +1,2 @@
+# The artwork bucket uses SSE-S3 (AES256). AWS-0132 asks for a customer-managed KMS key, which is not the preset.
+AWS-0132
