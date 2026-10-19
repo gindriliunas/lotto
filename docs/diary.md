@@ -81,4 +81,8 @@ The SAST job failed before it scanned anything. The Semgrep image does not provi
 
 The container scan failed on high vulnerabilities in `brace-expansion`, `picomatch`, `sigstore`, `ip-address`, and `pacote`. Those packages belong to the npm client shipped in `node:22-alpine`, not to the app. The image now deletes npm after `npm ci`, because the running task only needs `node`.
 
+## Step 14. Point ZAP findings at a file
+
+GitHub refused the DAST report because each location was an `http` address. The URL stays in the finding text. The location is now `src/server.js`, which is the process ZAP scanned.
+
 

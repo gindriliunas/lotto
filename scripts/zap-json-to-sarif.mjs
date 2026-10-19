@@ -30,17 +30,17 @@ for (const alert of alerts) {
       properties: { tags },
     });
   }
-  for (const instance of alert.instances ?? [{ uri: "http://127.0.0.1:3000" }]) {
+  for (const instance of alert.instances ?? [{}]) {
+    const where = instance.uri ? ` at ${instance.uri}` : "";
+    const evidence = instance.evidence ? `: ${instance.evidence}` : "";
     results.push({
       ruleId: id,
       level,
-      message: {
-        text: instance.evidence ? `${name}: ${instance.evidence}` : name,
-      },
+      message: { text: `${name}${where}${evidence}` },
       locations: [
         {
           physicalLocation: {
-            artifactLocation: { uri: instance.uri || "http://127.0.0.1:3000" },
+            artifactLocation: { uri: "src/server.js" },
           },
         },
       ],
