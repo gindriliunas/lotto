@@ -4,18 +4,29 @@ on:
   workflow_dispatch:
 
 jobs:
-  whoami:
+  deploy:
     runs-on: ubuntu-latest
     environment: production
     permissions:
       id-token: write
       contents: read
     steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
       - name: Assume the role
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::631026310596:role/gindriliunas
           aws-region: eu-west-2
 
-      - name: Show the assumed identity
-        run: aws sts get-caller-identity
+      - name: Push the image
+        run: |
+          registry=631026310596.dkr.ecr.eu-west-2.amazonaws.com
+          aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin "$registry"
+          docker build -t "$registry/scratch-card:latest" -t "$registry/scratch-card:${{ github.sha }}" .
+          docker push "$registry/scratch-card:latest"
+          docker push "$registry/scratch-card:${{ github.sha }}"
+
+      - name: Roll the service
+        run: aws ecs update-service --cluster scratch-card --service scratch-card --force-new-deployment

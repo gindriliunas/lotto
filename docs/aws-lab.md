@@ -112,7 +112,7 @@ The repository, the people, and the code are three different controls.
 
 The lab repo is public: https://github.com/gindriliunas/lotto. For a real prize pool, make it private. A public repo lets anyone read the draw. Secret scanning, push protection, and Dependabot alerts are already on, so a committed key or a database URL is rejected before it lands.
 
-A ruleset targets the default branch, `main`. The bypass list is empty, so a direct push is refused for the owner as well. A change arrives as a pull request. After `.github/workflows/security.yml` has run once on GitHub, require these checks: **SAST**, **SCA**, **Reject a bucket that is not private**, **Container**, **Secret**, and **DAST**. Give `src/play.js` a second approver, because that file spends credits and draws the prize. The GitHub user that can approve should have MFA.
+A ruleset targets the default branch, `main`. The bypass list is empty, so a direct push is refused for the owner as well. A change arrives as a pull request. The required checks include **SAST**, **DAST**, **SCA**, **Secret**, and **Container**. Confirm **Reject a bucket that is not private** is on that list too. Give `src/play.js` a second approver, because that file spends credits and draws the prize. The GitHub user that can approve should have MFA. The open items are under **Not done yet** in [diary.md](diary.md).
 
 The production environment already has a required reviewer. The Deploy job declares `environment: production`, so GitHub holds the job, and the OIDC token, until that review is approved. In this lab the reviewer is the same user who starts the run. That gap is listed under residual risk.
 
@@ -333,14 +333,13 @@ The preset on both buckets:
 - A bucket policy that denies any request where `aws:SecureTransport` is false.
 - On the artwork bucket only, one allow for `cloudfront.amazonaws.com`, restricted with `AWS:SourceArn`. The ticket bucket has no allow. There is no `Principal: "*"` on an allow, and there is no public ACL.
 
-Apply them yourself when the distribution exists:
+The live stack, including these two buckets, is `infra/platform`. Its state is kept in the private bucket created by `infra/state`, not in this folder. Apply the state bucket first, then the platform. `infra/s3` stays in the repository so the scan can see the preset. Do not apply `infra/s3` as well, or a second pair of buckets is created.
 
 ```bash
-terraform -chdir=infra/s3 init
-terraform -chdir=infra/s3 apply \
-  -var="bucket_name=YOUR-UNIQUE-ARTWORK-NAME" \
-  -var="ticket_bucket_name=YOUR-UNIQUE-TICKET-NAME" \
-  -var="cloudfront_distribution_arn=arn:aws:cloudfront::ACCOUNT:distribution/ID"
+terraform -chdir=infra/state init
+terraform -chdir=infra/state apply
+terraform -chdir=infra/platform init
+terraform -chdir=infra/platform apply
 ```
 
 Correct when both block-public-access panels show all four blocks on, a direct public object URL returns Access Denied, the card face still loads on `scratch.example.com` through CloudFront, and a saved screenshot is visible only after sign-in.
