@@ -69,4 +69,8 @@ This folder is now its own git repo. The home-folder repo was left alone. `main`
 
 Each of the six jobs now writes a SARIF report and uploads it. On the pull request the findings show against the change. They appear in the repository Security tab after the workflow runs on `main`. ZAP's own report is JSON, and `scripts/zap-json-to-sarif.mjs` converts it.
 
+## Step 11. Open a second pull request
+
+Pull request 1 was merged before the SARIF upload was pushed, so that change was not on `main`. It is now in https://github.com/gindriliunas/lotto/pull/2.
+
 
