@@ -1,0 +1,22 @@
+---
+description: Append each finished piece of project work to docs/diary.md
+alwaysApply: true
+---
+
+# Project diary
+
+`docs/diary.md` is the running log of this scratch-card project. Other chats must keep it current.
+
+When a task in this project is finished, append the next numbered step before `## Not done yet`. Do this in the same turn as the work. Skip the diary only for a question that changed nothing.
+
+- Plain language. Short. Say what was done and how to see it.
+- Next number after the last `## Step N`.
+- Do not rewrite earlier steps.
+- If the work completes or changes an item under `## Not done yet`, update that list.
+- Do not log this rule, tool calls, or attempts that were reverted.
+
+```markdown
+## Step 6. Short name
+
+One or two sentences on what changed. Say the file or the page if that helps.
+```

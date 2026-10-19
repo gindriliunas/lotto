@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Scratch card</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">Two plays a day, reset at midnight UK</p>
+      <h1>Scratch for £1,000,000</h1>
+      <p id="credits" class="credits">Checking plays…</p>
+      <button id="play" type="button">Play</button>
+      <p id="message" class="message" role="status"></p>
+      <section id="card" class="card" hidden>
+        <div class="card-face">
+          <p id="prize" class="prize"></p>
+          <p id="outcome" class="outcome"></p>
+          <canvas id="foil" width="640" height="320" aria-label="Scratch the foil"></canvas>
+        </div>
+        <button id="screenshot" class="secondary" type="button">Save screenshot</button>
+        <img id="saved-ticket" alt="Saved ticket" hidden />
+      </section>
+      <p class="note">
+        The result is chosen on the server before you scratch. Scratching only uncovers it.
+      </p>
+    </main>
+    <script src="/scratch.js"></script>
+  </body>
+</html>
