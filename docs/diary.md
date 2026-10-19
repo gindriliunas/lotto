@@ -61,4 +61,8 @@ A ruleset on https://github.com/gindriliunas/lotto now targets the default branc
 
 `.github/workflows/security.yml` runs SAST, SCA, Terraform, container, secret, and DAST on a pull request and on `main`. Semgrep, Trivy, Gitleaks, and OWASP ZAP each fail the check on a serious finding. The Terraform job still refuses a public S3 bucket. This file is in the project folder. It runs on GitHub after a pull request puts it on `main`.
 
+## Step 9. Push the project
+
+This folder is now its own git repo. The home-folder repo was left alone. `main` on GitHub refuses a direct push, so the app and the scans went to the branch `add-scratch-card`. The pull request is https://github.com/gindriliunas/lotto/pull/1. It keeps the Deploy workflow that was already on GitHub.
+
 
